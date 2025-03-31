@@ -23,12 +23,32 @@ python3 main.py  --dataset lacuna100binary128 --model resnetsmooth --dataroot da
 
 ## Performance of Noised Retrained Model
 
-### Lacuna-100
+### eICU Dataset
+
+![image](eicu_retrain_forget_err.png)
+![image](eicu_retrain_test_err.png)
+![image](eicu_retrain_train_err.png)
+
 Below we also provide numerical results for $\epsilon = 40$ of the noised retrained model. These results will be added to Table 8 and 9.
 
-| Algorithm    | Retrained Unlearned Error | Retrained Test Error | Retrained Train Error | Retrained MIA Score |
+| Noise Level    | Retrained Unlearned Error | Retrained Test Error | Retrained Retain Error | Retrained MIA Score |
+|---------------|----------------|------------|-------------|-----------|
+| R2D, 22%     | 0.3108          | 0.3115     | 0.3095      | 0.5004    |
+| R2D, 41%     | 0.3031          | 0.3091     | 0.3071      | 0.5027    |
+| R2D, 61%     | 0.3043          | 0.3075     | 0.3061      | 0.5047    |
+| R2D, 80%     | 0.3001          | 0.3073     | 0.3052      | 0.5066    |
+
+### Lacuna-100 Dataset
+
+![image](lacuna_retrain_forget_err.png)
+![image](lacuna_retrain_test_err.png)
+![image](lacuna_retrain_train_err.png)
+
+
+Below we also provide numerical results for $\epsilon = 40$ of the noised retrained model. These results will be added to Table 8 and 9.
+
+| Noise Level    | Retrained Unlearned Error | Retrained Test Error | Retrained Retain Error | Retrained MIA Score |
 |---------------|----------------|------------|-------------|-----------|
 | R2D, 26%     | 0.3780          | 0.3826     | 0.3784      | 0.5591    |
 | R2D, 51%     | 0.1745          | 0.1969     | 0.1948      | 0.5735    |
 | R2D, 75%     | 0.1002          | 0.1210     | 0.1103      | 0.5731    |
-| R2D, 100%    | 0.0969          | 0.0912     | 0.0647      | 0.5958    |
