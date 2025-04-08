@@ -20,6 +20,46 @@ To train the model from scratch, run:
 ```sh
 python3 main.py  --dataset lacuna100binary128 --model resnetsmooth --dataroot data/lacuna100binary128/ --epochs 100 --lr 0.1 --batch-size 256 --compute-lipschitz --scheduler 0.9 --model-selection --save-checkpoints
 ```
+## Plots for Reviewer vYe7
+
+### Impact of Varying Unlearned Ratio $m/n$ on $\sigma$ and Test Error
+
+<p float="left">
+  <img src="/eicu_m_vs_sigma.png" width="500" />
+  <img src="/eicu_test_err_m.png" width="500" /> 
+</p>
+
+<p float="left">
+  <img src="/lacuna_m_vs_sigma.png" width="500" />
+  <img src="/lacuna_test_err_m.png" width="500" /> 
+</p>
+
+### $K$ vs. $\sigma$
+<p float="left">
+  <img src="/eicu_K_vs_sigma.png" width="500" />
+  <img src="/lacuna_K_vs_sigma.png" width="500" /> 
+</p>
+
+### $\epsilon$ vs. $\sigma$
+<p float="left">
+  <img src="/eicu_eps_vs_sigma.png" width="500" />
+  <img src="/lacuna_eps_vs_sigma.png" width="500" /> 
+</p>
+
+### Figures 1abc
+<p float="left">
+  <img src="/eicu_err_vs_K.png" width="250" />
+  <img src="/eicu_err_vs_eps.png" width="250" /> 
+  <img src="/eicu_eps_vs_K.png" width="250" /> 
+</p>
+
+<p float="left">
+  <img src="/lacuna_err_vs_K.png" width="250" />
+  <img src="/lacuna_err_vs_eps.png" width="250" /> 
+  <img src="/lacuna_eps_vs_K.png" width="250" /> 
+</p>
+
+
 
 ## Performance of Noised Retrained Model
 
