@@ -53,6 +53,12 @@ def lacuna100binary128(root, augment=False):
     return dataset
 
 @_add_dataset #this is what i added
+def lacuna100multiclass(root, augment=False):
+    transform = _get_lacuna_transforms(augment=augment)
+    dataset = Lacuna100Large(root=root, transform=transform)
+    return dataset
+
+@_add_dataset #this is what i added
 def eicu(root, augment=False, transform=None):
     dataset = eICU(root=root)
     return dataset
@@ -71,7 +77,7 @@ def get_loader_simple(dataset_name, root, seed: int = 1, batch_size = 128, shuff
     return(data_loader)
 
 
-def remove_ids(dataset, ids, num_forget=None):
+def remove_ids(dataset, ids, num_forget=None): #removes certain people
     final_indices = []
     for j in range(len(dataset.indices)):
         if dataset.identities[dataset.indices[j]] in ids: 
@@ -93,7 +99,6 @@ def keep_ids(dataset, ids, num_forget=None):
 def get_loaders_large(dataset_name, num_ids_forget: int = None, forget_ids = None, seed: int = 1, root: str = None, batch_size=128, shuffle=True, ood=True, test=False, **dataset_kwargs):
     '''
     num_ids_forget: number of ids to forget 
-    num_forget : number of each id to forget (currently doesn't work or do anything)
     forget_ids: specific ids to forget, if None then they are randomly chosen
     test: whether or not to get test loaders
     '''
@@ -125,42 +130,58 @@ def get_loaders_large(dataset_name, num_ids_forget: int = None, forget_ids = Non
     valid_idx=[]
     
     Nclasses = max(train_set.targets) + 1
+
+    #makes sure valid set is balanced
     for i in range(Nclasses): # iterating through both classes (0 and 1)
         class_idx = np.where(train_set.targets==i)[0] #since np.where returns a tuple, the first element contains the actual indices
-        valid_idx.append(rng.choice(class_idx,int(0.2*len(class_idx)),replace=False)) #makes sure valid set is balanced
+        valid_idx.append(rng.choice(class_idx,int(0.2*len(class_idx)),replace=False)) 
     valid_idx = np.hstack(valid_idx)    
     train_idx = list(set(range(len(train_set)))-set(valid_idx))
-    train_set.indices = train_idx
-    valid_set.indices = valid_idx
+    train_set.indices = np.array(train_idx, dtype='int')
+    valid_set.indices = np.array(valid_idx, dtype='int')
 
     
     dset_list = [valid_set, test_set]
     #forget data
     if forget:
-        forget_set = copy.deepcopy(train_set) 
+        forget_set = copy.deepcopy(train_set)  #forget set is all samples from training and validation
         forget_set.reset() #forgotten samples from both training and validation
 
-        train_forget_set = copy.deepcopy(train_set)
+        train_forget_set = copy.deepcopy(train_set) #train forget set is samples getting forgotten from train set
 
-        all_ids = set(train_set.identities)
+
+        #all_ids = set(train_set.identities)
+
+        all_ids = set(train_set.identities[train_set.indices]) #only ids showing up in the train set
         
         if forget_ids is None:
             forget_ids = []
             
             if dataset_name != 'eicu':
-                #yes this code only works for binary classification
-                nclass0 = int(num_ids_forget/2.0)
-                nclass1 = num_ids_forget - nclass0
+
+                assert num_ids_forget % Nclasses == 0
+                num_from_class = int(num_ids_forget/Nclasses)
+                for y in range(Nclasses): #iterate through classes 
+                    class_idx = np.where(train_set.targets[train_set.indices]==y)[0] #get indices of actual training data where the target is this class
+                    class_ids = sorted(list(set(train_set.identities[train_set.indices][class_idx]))) #get the list of identities #sort to make sure seed returns consistent results
+                    selected_class_ids = rng.choice(class_ids, num_from_class, replace=False).tolist()
+                    forget_ids = forget_ids + selected_class_ids
+                    
+                    
+
+                # #yes this code only works for binary classification and also for only one out of each class??
+                # nclass0 = int(num_ids_forget/2.0) 
+                # nclass1 = num_ids_forget - nclass0
                 
-                class0_idx = np.where(train_set.targets==0)[0] #since np.where returns a tuple, the first element contains the actual indices
-                class0_idx = rng.choice(class0_idx, nclass0, replace=False) #makes sure forget set is balanced
-                class0_identities = [train_set.identities[class0_i] for class0_i in class0_idx]
+                # class0_idx = np.where(train_set.targets==0)[0] #since np.where returns a tuple, the first element contains the actual indices
+                # class0_idx = rng.choice(class0_idx, nclass0, replace=False) #makes sure forget set is balanced
+                # class0_identities = [train_set.identities[class0_i] for class0_i in class0_idx]
 
-                class1_idx = np.where(train_set.targets==1)[0] #since np.where returns a tuple, the first element contains the actual indices
-                class1_idx = rng.choice(class1_idx, nclass1, replace=False) #makes sure forget set is balanced
-                class1_identities = [train_set.identities[class1_i] for class1_i in class1_idx]
+                # class1_idx = np.where(train_set.targets==1)[0] #since np.where returns a tuple, the first element contains the actual indices
+                # class1_idx = rng.choice(class1_idx, nclass1, replace=False) #makes sure forget set is balanced
+                # class1_identities = [train_set.identities[class1_i] for class1_i in class1_idx]
 
-                forget_ids = class0_identities + class1_identities
+                # forget_ids = class0_identities + class1_identities
             else:
                 forget_ids = rng.choice(sorted(list(all_ids)), num_ids_forget, replace=False) #sorted necessary to make sure seed makes consistent results
         
@@ -236,6 +257,7 @@ def get_loaders_large(dataset_name, num_ids_forget: int = None, forget_ids = Non
         forget_loader = torch.utils.data.DataLoader(forget_set, batch_size=batch_size, shuffle=shuffle,
                                               worker_init_fn=_init_fn if seed is not None else None, **loader_args) #shuffle
         loaders['forget_loader'] = forget_loader
+        loaders['forget_ids'] = forget_ids
 
         print(f"Number of train forget samples: {len(train_forget_set)}")
     
@@ -250,4 +272,131 @@ def get_loaders_large(dataset_name, num_ids_forget: int = None, forget_ids = Non
             loaders['test_retain_loader'] = test_retain_loader
     
     return loaders
+        
+
+def get_shadow_loaders(dataset_name, attack_id, Nshadows, seed: int = 1, root: str = None, batch_size=128, shuffle=True,  **dataset_kwargs):
+    '''
+    attack_id: the id considered in the forget set for attacking
+    test: whether or not to get test loaders
+    Nshadows: number of shadow models/datasets
+    Only works for lacuna!!
+    '''
+
+    forget = True
+
+    manual_seed(seed)
+    if root is None:
+        root = os.path.expanduser('~/data')
+
+    train_root = root + '/in_distribution/train'
+    train_set = _DATASETS[dataset_name](train_root, **dataset_kwargs)
+    ood_root = root + '/oo_distribution'
+    ood_set = _DATASETS[dataset_name](ood_root, **dataset_kwargs)
+
+    
+    #train validation split
+    valid_set = copy.deepcopy(train_set)
+    
+
+    rng = np.random.RandomState(seed)
+    valid_idx=[]
+    
+    Nclasses = max(train_set.targets) + 1
+    for i in range(Nclasses): # iterating through both classes (0 and 1)
+        class_idx = np.where(train_set.targets==i)[0] #since np.where returns a tuple, the first element contains the actual indices
+        valid_idx.append(rng.choice(class_idx,int(0.2*len(class_idx)),replace=False)) #makes sure valid set is balanced
+    valid_idx = np.hstack(valid_idx)    
+    train_idx = list(set(range(len(train_set)))-set(valid_idx))
+    train_set.indices = train_idx
+    valid_set.indices = valid_idx
+
+    #forget data
+    
+
+    attack_id_class = train_set.targets[np.where([train_set.identities == attack_id])[0][0]] #class of the target_id
+
+    #only works for binary classification!
+    other_class = int(not attack_id_class)
+
+    loaders_list = []
+
+
+    other_class_ids = train_set.identities[np.where(train_set.targets== other_class)[0]] #since np.where returns a tuple, the first element contains the actual indices
+    forget_ids_lst = rng.choice(other_class_ids, Nshadows, replace=False) 
+
+
+    og_train_set = copy.deepcopy(train_set)
+    og_valid_set = copy.deepcopy(valid_set)
+
+
+    loader_args = {'num_workers': 0, 'pin_memory': False}
+    def _init_fn(worker_id):
+        np.random.seed(int(seed))
+
+    
+    print(f"Number of ood samples: {len(ood_set)}")
+    ood_loader = torch.utils.data.DataLoader(ood_set, batch_size=batch_size, shuffle=False,
+                                              worker_init_fn=_init_fn if seed is not None else None, **loader_args)
+
+    for t in range(Nshadows):
+
+        train_set = copy.deepcopy(og_train_set)
+        valid_set = copy.deepcopy(og_valid_set)
+
+        forget_set = copy.deepcopy(train_set) 
+        forget_set.reset() #forgotten samples from both training and validation
+
+        train_forget_set = copy.deepcopy(train_set)
+
+        all_ids = set(train_set.identities)
+
+        forget_ids = [attack_id, forget_ids_lst[t]]
+        
+
+        retain_ids = list(all_ids - set(forget_ids))
+        
+
+        print(f"Forgetting these IDs: {forget_ids}")
+
+        remove_ids(train_set, forget_ids)
+        remove_ids(train_forget_set, retain_ids)
+
+        remove_ids(forget_set, retain_ids)
+        remove_ids(valid_set, forget_ids)
+
+
+
+        print(f"Number of training samples: {len(train_set)}")
+        print(f"Number of validation samples: {len(valid_set)}")
+
+    
+        loaders = dict()
+
+
+        train_loader = torch.utils.data.DataLoader(train_set, batch_size=batch_size, shuffle=shuffle,
+                                                worker_init_fn=_init_fn if seed is not None else None, **loader_args) #shuffle
+        valid_loader = torch.utils.data.DataLoader(valid_set, batch_size=batch_size, shuffle=False,
+                                                worker_init_fn=_init_fn if seed is not None else None, **loader_args)
+
+
+        loaders['train_loader'] = train_loader
+        loaders['valid_loader'] = valid_loader
+
+
+        
+        train_forget_loader = torch.utils.data.DataLoader(train_forget_set, batch_size=batch_size, shuffle=shuffle,
+                                              worker_init_fn=_init_fn if seed is not None else None, **loader_args) #shuffle
+        forget_loader = torch.utils.data.DataLoader(forget_set, batch_size=batch_size, shuffle=shuffle,
+                                              worker_init_fn=_init_fn if seed is not None else None, **loader_args) #shuffle
+        loaders['ood_loader'] = ood_loader
+        loaders['train_forget_loader'] = train_forget_loader
+        loaders['forget_loader'] = forget_loader
+
+        print(f"Number of train forget samples: {len(train_forget_set)}")
+
+
+        loaders_list.append(loaders)
+
+    
+    return forget_ids_lst, loaders_list
         

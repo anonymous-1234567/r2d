@@ -1,4 +1,3 @@
-#Unofficial implementation of Constrained Newton Step
 #https://github.com/zhangbinchi/certified-deep-unlearning/blob/main/unlearn.py
 
 import time
@@ -132,18 +131,22 @@ def inverse_hvp(y, w, v):
     hessian_mat = torch.cat(hessian_list, 0)
     return torch.linalg.solve(hessian_mat, v.view(-1, 1))
 
-def compute_noise_cns(eps, delta, L,  G, d, C = 21, rho=0.1, M=1, lam = 2000, lam_min = 0):
+def compute_noise_cns(eps, delta, L,  G, d, C = 21, rho=0.1, M=1, lam = 1000, lam_min = 0):
     '''
     M: Lipschitz constant of the Hessian
     L: Lipschitz constant of gradient
     rho: probability that the bound does not hold  
     '''
     Delta = (2 * C * (M * C + lam) + G)/(lam + lam_min) + ((16 * np.sqrt(d/rho))/(lam + lam_min) + 1/16.0) * (2 * L * C + G)
-    sigma = calibrateAnalyticGaussianMechanism(eps, delta, Delta)
+    if eps <= 1:
+        sigma = Delta * np.sqrt(2 * np.log(1.25/delta))/eps
+    else:
+        sigma = calibrateAnalyticGaussianMechanism(eps, delta, Delta, tol=1e-12)
+    
     return sigma
 
 
-def newton_update(g, batch_size, res_set, lam, gamma, model, s1, s2, scale, device):
+def newton_update(g, batch_size, res_set, lam, gamma, model, s1, s2, scale, device): #gamma is the convex approximation coefficient, lam is the weight decay coefficeint
     model.eval()
     criterion = nn.CrossEntropyLoss()
     params = [p for p in model.parameters() if p.requires_grad]
@@ -201,16 +204,19 @@ if __name__ == "__main__":
                         help='Number of IDs to forget')
     parser.add_argument('--weight-decay', type=float, default=0.0005, metavar='M',
                         help='Weight decay (default: 0.0005)')
+    
     parser.add_argument('--C', type=float, default=21.0,
                         help='Norm constraint of parameters')
     parser.add_argument('--s1', type=int, default=10, help='Number of samples in Hessian approximation')
     parser.add_argument('--s2', type=int, default=1000, help='The order number of Taylor expansion in Hessian approximation')
-    parser.add_argument('--std', type=float, default=0.001, help='The standard deviation of Gaussian noise')
-    parser.add_argument('--gamma', type=float, default=.01, help='The convex approximation coefficient')
+    parser.add_argument('--std', type=float, default=0, help='The standard deviation of Gaussian noise')
+    parser.add_argument('--gamma', type=float, default=200, help='The convex approximation coefficient')
     parser.add_argument('--scale', type=float, default=50000., help='The scale of Hessian')
+    parser.add_argument('--gpu', type=int, default=0, metavar='S',
+                        help='gpu')
     args = parser.parse_args()
     use_cuda = not args.no_cuda and torch.cuda.is_available()
-    args.device = torch.device("cuda" if use_cuda else "cpu")
+    args.device = torch.device("cuda:" + str(args.gpu) if use_cuda else "cpu")
 
     torch.manual_seed(args.seed)
 
@@ -236,10 +242,11 @@ if __name__ == "__main__":
 
     model.load_state_dict(torch.load(PATH_load, weights_only=True))
 
-    start = time.time()
+    
 
     res_loader = loaders['train_loader']
 
+    start = time.time()
     
     g = grad_batch(res_loader, args.weight_decay, model, args.device)
 

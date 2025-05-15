@@ -1,4 +1,3 @@
-#Unofficial implementation of the Hessian-Free method
 #https://github.com/Anonymous202401/If-Recollecting-were-Forgetting/blob/main/main_proposed.py
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
@@ -34,7 +33,7 @@ class DatasetSplit(Dataset):
 
     def __getitem__(self, item):
         image, label, identity = self.dataset[item]
-        return image, label, self.dataset.indices[item]
+        return image, label, self.dataset.indices[item] #returns the actual data index in the underlying dataset
 
 
 def train(step, args, net, Dataset2recollect, lr,info):
@@ -84,7 +83,7 @@ def train(step, args, net, Dataset2recollect, lr,info):
 
 
 if __name__ == '__main__':
-
+    print('starting')
 ###############################################################################
 #                               SETUP                                         #
 ###############################################################################
@@ -121,43 +120,43 @@ if __name__ == '__main__':
 #                               LEARNING                                      #
 ###############################################################################
     # training
-    acc_test = []
     step=0
     
     Dataset2recollect=DatasetSplit(dataset_train)
+    
+    if not args.dont_train:
+        print('training!')
+        for e in range(args.epochs):
+            info=[]
+            torch.cuda.synchronize()
+            t_start = time.time()
+            w, loss,lr, step = train(step, args=args, net=net, Dataset2recollect=Dataset2recollect, lr=args.lr, info=info)
+            torch.cuda.synchronize()
+            t_end = time.time()   
+            net.load_state_dict(w)
+            net.eval()
+            acc_t = 1 - compute_test_error(net.to(args.device), valid_loader, device=args.device)
+            print(" Epoch {:3d}, valid accuracy: {:.2f},Time Elapsed:  {:.7f}s \n".format(e, acc_t, t_end - t_start))
+            step += 1
 
-    for e in range(args.epochs):
-        info=[]
-        torch.cuda.synchronize()
-        t_start = time.time()
-        w, loss,lr, step = train(step, args=args, net=net, Dataset2recollect=Dataset2recollect, lr=args.lr, info=info)
-        torch.cuda.synchronize()
-        t_end = time.time()   
-        net.load_state_dict(w)
-        net.eval()
-        acc_t = 1 - compute_test_error(net.to(args.device), valid_loader, device=args.device)
-        print(" Epoch {:3d}, valid accuracy: {:.2f},Time Elapsed:  {:.7f}s \n".format(e, acc_t, t_end - t_start))
-        step += 1
-        acc_test.append(acc_t)
+            path1 = "./Checkpoint/model_{}_checkpoints". format(args.model)
+            file_name = "check_{}_epoch_{}_lr_{}_lrdecay_{}_clip_{}_seed{}_iter_{}.dat". format(
+                args.dataset,args.epochs, args.lr,args.lr_decay,args.clip,args.seed, e)
+            file_path = os.path.join(path1, file_name)
+            if not os.path.exists(os.path.dirname(file_path)):
+                os.makedirs(os.path.dirname(file_path))
 
-        path1 = "./Checkpoint/model_{}_checkpoints". format(args.model)
-        file_name = "check_{}_epoch_{}_lr_{}_lrdecay_{}_clip_{}_seed{}_iter_{}.dat". format(
-            args.dataset,args.epochs, args.lr,args.lr_decay,args.clip,args.seed, e)
-        file_path = os.path.join(path1, file_name)
-        if not os.path.exists(os.path.dirname(file_path)):
-            os.makedirs(os.path.dirname(file_path))
+            print('saving info')
+            info = joblib.dump(info,file_path); rho=0  
 
-        print('saving info')
-        info = joblib.dump(info,file_path); rho=0  
-
-        del info 
+            del info 
 
 
-    rootpath = './log/Original/Model/'
-    if not os.path.exists(rootpath):
-        os.makedirs(rootpath)   
-    torch.save(net.state_dict(),  rootpath+ 'Original_model_{}_data_{}_epoch_{}_lr_{}_lrdecay_{}_clip_{}_seed{}.pth'
-               .format(args.model,args.dataset, args.epochs,args.lr,args.lr_decay,args.clip,args.seed))
+        rootpath = './log/Original/Model/'
+        if not os.path.exists(rootpath):
+            os.makedirs(rootpath)   
+        torch.save(net.state_dict(),  rootpath+ 'Original_model_{}_data_{}_epoch_{}_lr_{}_lrdecay_{}_clip_{}_seed{}.pth'
+                   .format(args.model,args.dataset, args.epochs,args.lr,args.lr_decay,args.clip,args.seed))
         
 
     loaders = datasets.get_loaders_large(args.dataset, num_ids_forget = args.num_ids_forget, batch_size=args.batch_size, seed=args.seed, root=args.dataroot, ood=False)
@@ -170,12 +169,13 @@ if __name__ == '__main__':
 #                              PRECOMPUTATION UNLEARNING                      #
 ###############################################################################
     
+    print('generating approximators')
     Approximators, rho = getapproximator_resnet(args,Dataset2recollect=train_loader.dataset,indices_to_unlearn=indices_to_unlearn)
     
 
-    save_path = './log/Proposed/statistics/Approximators_all_model_{}_data_{}_epoch_{}_lr_{}_lrdecay_{}_clip_{}_seed{}.pth'.format(
+    save_path = './log/Approximators_all_model_{}_data_{}_epoch_{}_lr_{}_lrdecay_{}_clip_{}_seed{}.pth'.format(
         args.model,args.dataset,args.epochs, args.lr,args.lr_decay,args.clip,args.seed)
-
+ 
     print("saving approximators")
     torch.save({'Approximators': Approximators, 'rho': rho}, save_path)
 

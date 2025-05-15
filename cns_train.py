@@ -10,10 +10,12 @@ import datasets
 from utils import *
 import os
 
+import time
+
 
 def train(train_loader, val_loader, model, lr, wd, num_epochs, max_norm, path, device):
     criterion = nn.CrossEntropyLoss()
-    optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=wd)
+    optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=wd) #small regularization, not related to regularization in paper??
     
     min_val_loss = 1e10
     for epoch in range(num_epochs):
@@ -127,9 +129,11 @@ if __name__ == "__main__":
                         help='Weight decay (default: 0.0005)')
     parser.add_argument('--C', type=float, default=21.0,
                         help='Norm constraint of parameters')
+    parser.add_argument('--gpu', type=int, default=0, metavar='S',
+                        help='gpu')
     args = parser.parse_args()
     use_cuda = not args.no_cuda and torch.cuda.is_available()
-    args.device = torch.device("cuda" if use_cuda else "cpu")
+    args.device = torch.device("cuda:" + str(args.gpu) if use_cuda else "cpu")
 
     torch.manual_seed(args.seed)
 
@@ -154,7 +158,12 @@ if __name__ == "__main__":
 
     model = models.get_model(args.model, num_classes=num_classes, filters_percentage=args.filters).to(args.device)
 
+    t1 = time.time()
+
     train(trainloader, valloader, model, args.lr, args.weight_decay, args.epochs, args.C, PATH, args.device)
+    
+    t2 = time.time()
+    print(f"Training time: {np.round(t2 - t1)} seconds")
     
     #model.load_state_dict(torch.load(PATH, weights_only=True))
     
