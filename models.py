@@ -223,15 +223,14 @@ class _ResBlocksmooth(nn.Module):
         out += shortcut
         return out
 
+
 class MLP(nn.Module):
     def __init__(self, input_size=467, filters_percentage=None, num_classes=2):
         super(MLP, self).__init__() #allows you to call methods from the parent class nn.module, __init__() initializes for nn.module
 
-        self.l1 = nn.Linear(input_size, 2048)
-        self.l2 = nn.Linear(2048, 512)
-        self.l3 = nn.Linear(512, 256)
-        self.l4 = nn.Linear(256, 128)
-        self.l5 = nn.Linear(128, num_classes)
+        self.l1 = nn.Linear(input_size, 256)
+        self.l2 = nn.Linear(256, 64)
+        self.l5 = nn.Linear(64, num_classes)
 
     def forward(self, x):    
         model = torch.nn.Sequential(
@@ -239,14 +238,12 @@ class MLP(nn.Module):
             SmeLU(),
             self.l2,
             SmeLU(),
-            self.l3,
-            SmeLU(),
-            self.l4,
-            SmeLU(),
             self.l5
             #nn.Softmax(dim=-1)
         )
         return model(x)
+
+
 
 class ResNet18smooth(nn.Module):# NO RELU
     def __init__(self, filters_percentage=1.0, n_channels = 3, num_classes=10, block=_ResBlocksmooth, num_blocks=[2,2,2,2]):
