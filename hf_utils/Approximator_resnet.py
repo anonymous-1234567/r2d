@@ -80,7 +80,7 @@ def getapproximator_resnet(args,Dataset2recollect,indices_to_unlearn):
                 scaling_factor = args.clip / grad_norm
                 grad_params = [grad * scaling_factor for grad in grad_params]
             if not computed_rho:
-                rho = spectral_radius(args, loss_batch=loss_batch, net=net,t=len(info)*iter+b)
+                rho = spectral_radius(args, loss_batch, net)
                 print(f"RHO: {rho}")
                 computed_rho = True     
             t_start = time.time()   
@@ -91,7 +91,12 @@ def getapproximator_resnet(args,Dataset2recollect,indices_to_unlearn):
                     approximator[i][j]=approximator[i][j] - (lr* (args.lr_decay**(len(info)*iter+b)) * HVP_i[j].detach())
             del HVP_i,loss_batch,grad_params
             t_end = time.time()
-            print("Computaion For step {} Time Elapsed:  {:.8f}s \n".format(iter,t_end - t_start))    
+            print("Computaion For step {} Time Elapsed:  {:.8f}s \n".format(iter,t_end - t_start))   
+            
+            rootpath2 = './log/intermediate/'
+        if not os.path.exists(rootpath2):
+            os.makedirs(rootpath2)   
+            torch.save(approximator,  rootpath2+f"approximator_{iter}.pth")
 
     return approximator, rho
     

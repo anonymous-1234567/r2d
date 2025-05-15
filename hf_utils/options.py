@@ -20,11 +20,10 @@ def args_parser():
     parser.add_argument('--batch_size', type=int, default=512, help="batch size")
     
     parser.add_argument('--damping_factor', type=float, default=1e-2, help="to make Hessian invertible.") 
-    parser.add_argument('--test_train_rate', type=float, default=0.4, help="Ratio of test set to training set Translation")
-    
+    #parser.add_argument('--test_train_rate', type=float, default=0.4, help="Ratio of test set to training set Translation")
     #parser.add_argument('--std', type=float, default=0, help="Standard deviation")
-    parser.add_argument('--epsilon', type=float, default=20, help="Privacy budget")
-    parser.add_argument('--delta', type=float, default=0.1, help="Privacy relaxed level")
+    #parser.add_argument('--epsilon', type=float, default=20, help="Privacy budget")
+    #parser.add_argument('--delta', type=float, default=0.1, help="Privacy relaxed level")
     
     parser.add_argument('--num-ids-forget', type=int, default=940,
                         help='Number of IDs to forget')
@@ -35,6 +34,7 @@ def args_parser():
     parser.add_argument('--gpu', type=int, default=1, help="GPU ID, -1 for CPU")
     parser.add_argument('--bs', type=int, default=2048, help="test batch size")
     parser.add_argument('--application', action='store_true', help="Enable validation/application, defult: False")
+    parser.add_argument('--dont_train', action='store_true', help="dont train, defult: False")
     # MIA
     parser.add_argument('--attack_model',type=str, default='LR', help="Attack model: 'LR', 'MLP'")
     parser.add_argument('--method',type=str, default='direct_diff', help="Attack method: 'direct_diff', 'sorted_diff', 'direct_concat', 'sorted_concat', 'l2_distance'")

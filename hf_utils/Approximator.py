@@ -90,7 +90,7 @@ def getapproximator(args,Dataset2recollect):
             scaling_factor = args.clip / grad_norm
             grad_params = [grad * scaling_factor for grad in grad_params]
         if not computed_rho:
-            rho = spectral_radius(args, loss_batch=loss_batch, net=net,t=step)
+            rho = spectral_radius(args, loss_batch, net)
             print(f"RHO: {rho}")
             computed_rho = True  
         torch.cuda.synchronize()
