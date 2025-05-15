@@ -15,4 +15,4 @@ do
 done
 
 #sudo apt install bc
-#python3 main.py  --dataset lacuna100binary128 --model resnetsmooth --dataroot data/lacuna100binary128/ --epochs 300 --lr 0.01 --batch-size 256 --model-selection --plot --compute-lipschitz --save-checkpoints --seed 1
+#python3 main.py  --dataset lacuna100binary128 --model resnetsmooth --dataroot data/lacuna100binary128/ --epochs 300 --lr 0.01 --batch-size 512 --model-selection --plot --compute-lipschitz --save-checkpoints --seed 1
