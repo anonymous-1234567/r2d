@@ -129,6 +129,24 @@ def estimate_Lipschitz(model, Nsamples = 100):
 
 
     
+def run_epoch_simple(model, data_loader, device, criterion=torch.nn.CrossEntropyLoss(), optimizer=None):
+    model.train()
+
+    with torch.set_grad_enabled(True):
+
+        for batch_idx, (data, target, identity) in enumerate(data_loader):
+            data, target = data.to(device), target.to(device)
+
+                
+            output = model(data)
+            loss = criterion(output, target) 
+
+            optimizer.zero_grad() 
+            loss.backward()
+
+            optimizer.step()
+           
+    
 def run_epoch(args, model, data_loader, criterion=torch.nn.CrossEntropyLoss(), optimizer=None, epoch=0, mode='train'):
     
     if mode == 'train':
@@ -193,16 +211,16 @@ if __name__ == '__main__':
                         help='Cross Entropy: ce or mse')
     parser.add_argument('--lr', type=float, default=0.1, metavar='LR',
                         help='learning rate (default: 0.1)')
-    parser.add_argument('--scheduler', type=float, default=0.9,
+    parser.add_argument('--scheduler', type=float, default=1,
                         help='exponential scheduler')
     parser.add_argument('--model', default='resnetsmooth')
     parser.add_argument('--num-classes', type=int, default=None,
                         help='Number of Classes')
-
-    parser.add_argument('--no-cuda', action='store_true', default=False,
-                        help='disables CUDA training')
     parser.add_argument('--resume', type=str, default=None,
                         help='Checkpoint to resume')
+    parser.add_argument('--device', type=int, default=0, metavar='S',
+                        help='GPU device number')
+    
     parser.add_argument('--seed', type=int, default=1, metavar='S',
                         help='random seed (default: 1)')
     parser.add_argument('--save-checkpoints', action='store_true', default=False,
@@ -235,8 +253,8 @@ if __name__ == '__main__':
     os.makedirs('logs', exist_ok=True)
 
     #DEVICE MANAGEMENT
-    use_cuda = not args.no_cuda and torch.cuda.is_available()
-    args.device = torch.device("cuda" if use_cuda else "cpu")
+    use_cuda = torch.cuda.is_available()
+    args.device = torch.device("cuda:" + str(args.device) if use_cuda else "cpu")
     assert use_cuda
 
     os.makedirs('checkpoints', exist_ok=True)
@@ -383,7 +401,7 @@ if __name__ == '__main__':
         
         grad_vector = compute_full_gradient(args, model, train_loader, criterion)
 
-        Nsamples = 400 #number of samples for lipschitz estimate
+        Nsamples = 100 #number of samples for lipschitz estimate
         for i in tqdm(range(Nsamples)):
             model1 = copy.deepcopy(model)
             add_gaussian_noise_to_weights(args, model1, 0.01)
@@ -403,6 +421,7 @@ if __name__ == '__main__':
     #plotting! 
 
     if args.plot:
+        os.makedirs('plots', exist_ok=True)
         import matplotlib.pyplot as plt
 
         # plotting loss over time 
